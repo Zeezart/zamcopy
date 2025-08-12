@@ -1,0 +1,14 @@
+<div class="chat-input-area p-3 md:p-4 bg-gray-800 border-t border-gray-700">
+    <div class="flex items-center bg-gray-700 rounded-full p-1 transition-all focus-within:ring-2 focus-within:ring-blue-500">
+        <button class="p-1 md:p-2 text-gray-400 hover:text-white transition-colors">
+            <span class="material-icons text-lg md:text-xl">add_reaction</span>
+        </button>
+        <button class="p-1 md:p-2 text-gray-400 hover:text-white transition-colors">
+            <span class="material-icons text-lg md:text-xl">attach_file</span>
+        </button>
+        <input id="messageInput" class="flex-1 bg-transparent px-2 md:px-4 py-1 md:py-2 text-white placeholder-gray-400 focus:outline-none text-sm md:text-base" placeholder="Type a message..." type="text"/>
+        <button onclick="sendMessageOverWebSocket()" class="bg-blue-600 hover:bg-blue-700 text-white p-1 md:p-2 rounded-full transition-colors">
+            <span class="material-icons text-lg md:text-xl">send</span>
+        </button>
+    </div>
+</div>

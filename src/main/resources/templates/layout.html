@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster - Process Workflow Management</title>
+
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <!-- Font Awesome CSS -->
+    <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+            rel="stylesheet"
+            crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Application CSS -->
+    <link th:href="@{/css/app.css}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <!-- Theme initialization script to prevent flash of unstyled content -->
+    <script>
+      (function() {
+        const savedMode = localStorage.getItem('colorMode');
+        const html = document.documentElement;
+        const body = document.body;
+        
+        if (savedMode === 'light') {
+          body.classList.add('light-mode');
+          html.classList.remove('dark');
+        } else {
+          body.classList.remove('light-mode');
+          html.classList.add('dark');
+        }
+      })();
+        function toggleDropdown(menuId) {
+            const submenu = document.getElementById(`${menuId}-submenu`);
+            const icon = document.getElementById(`${menuId}-icon`);
+
+            if (submenu.style.maxHeight === '0px' || !submenu.style.maxHeight) {
+                // Open the dropdown
+                submenu.style.maxHeight = `${submenu.scrollHeight}px`;
+                icon.classList.add('rotate-90');
+
+                // Show submenu items with delay for staggered effect
+                const items = submenu.querySelectorAll('a');
+                items.forEach((item, index) => {
+                    setTimeout(() => {
+                        item.classList.remove('opacity-0');
+                    }, index * 100);
+                });
+            } else {
+                // Close the dropdown
+                submenu.style.maxHeight = '0px';
+                icon.classList.remove('rotate-90');
+
+                // Hide submenu items
+                const items = submenu.querySelectorAll('a');
+                items.forEach(item => {
+                    item.classList.add('opacity-0');
+                });
+            }
+        }
+    </script>
+<script>
+    let stompClient = null
+    function connectStomp() {
+    const socket = new SockJS('/ws');
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function (frame) {
+        console.log('Connected:', frame);
+
+        stompClient.subscribe(`/topic/group/449a5325-da3e-4692-93ea-ce8da8346e2f`, function () {
+          console.log('connection is ready');
+        });
+    }
+</script>
+</head>
+
+<body class="flex h-screen">
+<div class="sidebar-overlay"></div>
+<aside class="sidebar w-64 p-6 flex flex-col justify-between fixed lg:relative h-screen overflow-y-auto">
+    <div>
+        <div class="flex items-center mb-10 space-x-2">
+            <img src="/images/justjavaLogo.svg" class="w-8 h-8">
+            <h1 class="text-2xl font-bold text-white mt-1 brand-title">JustJava</h1>
+        </div>
+        <nav class="space-y-4">
+            <a class="flex items-center px-4 py-3 text-slate-300 text-white rounded-lg"
+               th:href="@{/dashboard}"
+               th:classappend="${currentPath == '/dashboard'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+
+<!--            <a th:if="${session.isAdmin == true or session.isManager == true}"-->
+<!--               class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg"-->
+<!--               th:classappend="${currentPath == '/processes/' + name.processKey} ? ' bg-blue-600'"-->
+<!--               th:each="name : ${session.processNames}"-->
+<!--               th:href="@{'/processes/' + ${name.processKey}}">-->
+<!--                <span class="material-icons mr-3">task_alt</span>-->
+<!--                <span th:text="${name.processName}">Process Name</span>-->
+<!--                <span>Tasks</span>-->
+<!--            </a>-->
+            <div th:each="name : ${session.processNames}">
+                <button th:attr="onclick='toggleDropdown(&quot;' + ${name.processName} + '&quot;)'"
+                 class="w-full flex items-center justify-between px-4 py-3 text-slate-300 transition-all duration-200 menu-item">
+                    <div class="flex items-center space-x-3">
+                        <span class="material-icons">task_alt</span>
+                        <span th:text="${#strings.arraySplit(name.processName, ' ')[0]}"
+                        >Default</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-xs dropdown-icon transition-transform duration-200" th:id="${name.processName} + '-icon'"></i>
+                </button>
+
+                <div class="submenu mt-1 ml-10" th:id="${name.processName} + '-submenu'" style="max-height: 0px;">
+                    <a th:href="@{'/processes/' + ${name.processKey}}" th:text="${name.processName}" class="block py-2 px-3 rounded-lg transition-all duration-200 text-sm opacity-0">Account</a>
+                    <a th:href="@{'/tasks/' + ${name.processKey}}" class="block py-2 px-3 rounded-lg transition-all duration-200 text-sm opacity-0">Tasks</a>
+                    <a th:href="@{'/forms/' + ${name.processKey}}" class="block py-2 px-3 rounded-lg transition-all duration-200 text-sm opacity-0">Manage Forms</a>
+                </div>
+            </div>
+
+            <!--<a class="f lex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg"  th:href="@{/processes}"
+               th:classappend="${currentPath == '/processes'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">sync_alt</span>
+                <span>Cases</span>
+            </a>
+            <a th:if="${session.isAdmin}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg"  th:href="@{/forms}"
+               th:classappend="${currentPath == '/forms'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">note_add</span>
+                <span>Task Forms</span>
+            </a>-->
+            <a class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg" th:href="@{/report}"
+               th:classappend="${currentPath == '/report'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">bar_chart</span>
+                <span>Reports</span>
+            </a>
+            <!--<a th:if="${session.isAdmin}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg" th:href="@{/users}"
+               th:classappend="${currentPath == '/users'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">group</span>
+                <span>User Management</span>
+            </a>-->
+            <a class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg" th:href="@{/invoice}"
+               th:classappend="${currentPath == '/invoice'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">receipt_long</span>
+                <span>Invoices</span>
+            </a>
+
+            <a th:if="${session.isManager}" class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg"
+               th:href="@{/invoice/invoice-review}"
+               th:classappend="${currentPath == '/invoice/invoice-review'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">receipt_long</span>
+                <span>Invoice Review</span>
+            </a>
+
+            <a class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg" th:href="@{/chat}"
+               th:classappend="${currentPath == '/chat'} ? ' bg-blue-600'">
+                <span class="material-icons mr-3">chat</span>
+                <span>Chat</span>
+            </a>
+            <a class="flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 rounded-lg" th:href="@{/gallery}"
+               th:classappend="${currentPath == '/gallery' or currentPath == '/addFile'} ? ' bg-blue-600'">
+            <span class="material-icons mr-3">collections</span>
+                <span>Gallery</span>
+            </a>
+        </nav>
+    </div>
+</aside>
+<main class="main-content flex-1 flex flex-col overflow-x-hidden">
+    <header class="flex items-center justify-between p-4 md:p-6 border-b border-slate-800">
+        <div class="flex items-center">
+            <button id="menu-toggle" class="text-slate-400 mr-4 lg:hidden">
+                <span class="material-icons">menu</span>
+            </button>
+            <div class="search-container relative">
+                <span class="material-icons search-icon">search</span>
+                <input class="search-input text-white rounded-lg pl-10 pr-4 py-2 w-40 md:w-64 lg:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search" type="text"/>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4 md:space-x-6">
+            <button id="mode-toggle" class="text-slate-400">
+                <span class="material-icons">nightlight_round</span>
+            </button>
+            <button class="text-slate-400 relative">
+                <span class="material-icons">notifications</span>
+                <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+            <img alt="User avatar" class="w-8 h-8 md:w-10 md:h-10 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1TNQQ4ccZFKvYjRCc-rE6p0QuKlFhfQYUbx1rZZS3ODc_DtNgl6b-1LYcXbxLfeyClRY0GHzY0wvA4-gyFvp5IfVYOVVgdn9H8XRZv3JFNrNWD46u6DL1PQ9JlEVx6QzF2e1pOeuEa8VmW1V-2uuTOORkf0lCwPlKUWwAJnIPGOrCMC99VYhvwvozKwbk84CId3PYToMrt_Q3zg6mp4TZb_REXlsSWHPsOl7wS56kpGKt71JHpGs9hK7omvmX9jsYW33esDwKMlVU"/>
+        </div>
+    </header>
+    <section layout:fragment="content">
+    </section>
+
+</main>
+
+<!-- Support Chat Button -->
+<button id="support-chat-btn" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 z-50 hover:scale-110">
+    <span class="material-icons text-2xl">headset_mic</span>
+</button>
+
+<!-- Chat Box -->
+<div id="chat-box" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-120 h-196 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 hidden flex-col max-sm:w-full max-sm:h-full max-sm:top-0 max-sm:left-0 max-sm:transform-none max-sm:rounded-none" style="background-color: rgb(30, 41, 59);">
+    <!-- Chat Header -->
+    <div id="chat-header" class="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-900 rounded-t-lg max-sm:rounded-none cursor-move" style="background-color: rgb(15, 23, 42);">
+        <div class="flex items-center space-x-2">
+            <span class="material-icons text-blue-400">support_agent</span>
+            <h3 class="text-white font-semibold">Support Chat</h3>
+            <div class="w-2 h-2 bg-green-500 rounded-full ml-2"></div>
+        </div>
+        <button id="close-chat-btn" class="text-slate-400 hover:text-white transition-colors">
+            <span class="material-icons">close</span>
+        </button>
+    </div>
+
+    <!-- Chat Messages -->
+    <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-800">
+        <div class="flex items-start space-x-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="material-icons text-white text-sm">support_agent</span>
+            </div>
+            <div class="bg-slate-700 text-white p-3 rounded-lg rounded-tl-none max-w-xs">
+                <p class="text-sm">Hello! I'm here to help you with any Legal related question. How can I assist you today?</p>
+                <span class="text-xs text-slate-400 mt-1 block">Just now</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="p-4 border-t border-slate-700 bg-slate-900">
+        <div class="flex space-x-2">
+            <input
+                    id="chat-input"
+                    type="text"
+                    placeholder="Type your message..."
+                    class="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-400"
+                    style="background-color: rgb(51, 65, 85); color: white;"
+            />
+            <button
+                    id="send-message-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <span class="material-icons text-sm">send</span>
+            </button>
+        </div>
+        <div class="flex items-center mt-2 text-xs text-slate-400">
+            <span class="material-icons text-xs mr-1">info</span>
+            <span>Press Enter to send</span>
+        </div>
+    </div>
+</div>
+<!-- Theme toggle is handled by app.js -->
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+<script src="https://unpkg.com/hyperscript.org@0.9.14/dist/_hyperscript.min.js"></script>
+<script defer src="//unpkg.com/alpinejs"></script>
+
+<!-- Custom JS -->
+<script th:src="@{/js/app.js}"></script>
+
+<!-- Debug script for mode toggle -->
+
+</body>
+</html>

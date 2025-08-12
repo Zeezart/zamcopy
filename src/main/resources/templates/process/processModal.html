@@ -1,0 +1,30 @@
+<div th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+    <section class="mb-6" >
+        <p class="text-base mb-2">
+            <span class="font-bold text-white">Process:</span>
+            <span th:text="${processName}" class="font-normal text-slate-300">Onboard New Employee</span>
+        </p>
+        <p class="text-base">
+            <span class="font-bold text-white">ID:</span>
+            <span th:text="${processId}" class="font-normal text-slate-300">TSK1001</span>
+        </p>
+    </section>
+
+    <!-- Timeline -->
+    <section class="space-y-6">
+        <!-- Initiation Step -->
+        <article th:each="task : ${tasks}" class="flex items-start justify-between">
+            <div class="flex items-start space-x-3">
+                <div th:classappend="${#strings.trim(task.name) == #strings.trim(currentTask)}
+      ? 'timeline-circle-active' : 'timeline-circle-inactive'"
+                     class="timeline-circle mt-1"></div>
+                <div>
+                    <h3 th:text="${task.name}" class="text-base font-medium text-white">Initiation</h3>
+                    <p class="text-sm text-slate-300">Assignee: <span th:if="${task.assignee}" th:text="${task.assignee}"></span>
+                        <span th:unless="${task.assignee}">Unassigned</span></p>
+                </div>
+            </div>
+        </article>
+
+    </section>
+</div>
